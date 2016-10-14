@@ -10,6 +10,10 @@
 // prohibet state is signalised by LED
 #define prohibitedStateLED 5
 
+// PWM
+float dutyCycle = 0.05;
+#define MAX 255
+
 int rotorLocation = 1;
 
 // fuse in order to indicate whether some keys are in prohibited state
@@ -35,19 +39,19 @@ void commutation();
 
 void switchOnW()
 {
-   digitalWrite(WT, HIGH);
+   analogWrite(WT, dutyCycle * MAX);
    digitalWrite(WB, LOW);
 }
 
 void switchOnV()
 {
-   digitalWrite(VT, HIGH);
+   analogWrite(VT, dutyCycle * MAX);
    digitalWrite(VB, LOW);
 }
 
 void switchOnU()
 {
-   digitalWrite(UT, HIGH);
+   analogWrite(UT, dutyCycle * MAX);
    digitalWrite(UB, LOW);
 }
 
@@ -182,6 +186,9 @@ void commutation()
        
        rotorLocation = 1;
        
+       if(dutyCycle < 1) 
+         dutyCycle += 0.05;
+       
        break;
      } 
   }
@@ -208,7 +215,7 @@ void loop()
 {
   commutation();
   
-  delay(5); // setting engine speed 
+  delay(20); // setting engine speed 
 }
 
 
