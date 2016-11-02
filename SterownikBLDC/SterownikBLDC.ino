@@ -208,7 +208,7 @@ void loop()
 {
   commutation();
   
-  delay(5); // setting engine speed 
+  delay(15); // setting engine speed 
 }
 
 
