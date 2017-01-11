@@ -1,3 +1,8 @@
+// W - red
+// V - blue
+// U - green
+
+// in second engine W - blue, V - green
 
 // Top transistors PWM
 #define WT 11
@@ -10,9 +15,8 @@
 // prohibet state is signalised by LED
 #define prohibitedStateLED 5
 
-// PWM
-float dutyCycle = 0.05;
-#define MAX 255
+// to increase engine speed
+int shift = 50;
 
 int rotorLocation = 1;
 
@@ -35,42 +39,44 @@ void disconnectU();
 
 void commutation();
 
+int getDelay();
+
 /************************************************************************/
 
 void switchOnW()
 {
-   analogWrite(WT, dutyCycle * MAX);
-   digitalWrite(WB, LOW);
+  digitalWrite(WT, HIGH);
+  digitalWrite(WB, LOW);
 }
 
 void switchOnV()
 {
-   analogWrite(VT, dutyCycle * MAX);
-   digitalWrite(VB, LOW);
+  digitalWrite(VT, HIGH);
+  digitalWrite(VB, LOW);
 }
 
 void switchOnU()
 {
-   analogWrite(UT, dutyCycle * MAX);
-   digitalWrite(UB, LOW);
+  digitalWrite(UT, HIGH);
+  digitalWrite(UB, LOW);
 }
 
 void switchOffW()
 {
-   digitalWrite(WT, LOW);
-   digitalWrite(WB, HIGH);
+  digitalWrite(WT, LOW);
+  digitalWrite(WB, HIGH);
 }
 
 void switchOffV()
 {
-   digitalWrite(VT, LOW);
-   digitalWrite(VB, HIGH);
+  digitalWrite(VT, LOW);
+  digitalWrite(VB, HIGH);
 }
 
 void switchOffU()
 {
-   digitalWrite(UT, LOW);
-   digitalWrite(UB, HIGH);
+  digitalWrite(UT, LOW);
+  digitalWrite(UB, HIGH);
 }
 
 void disconnectW()
@@ -102,17 +108,17 @@ void fuse()
 {
   //if both keys (bottom and top) are switched on in any phase 
   if((digitalRead(WT) == HIGH && digitalRead(WB) == HIGH) || 
-     (digitalRead(VT) == HIGH && digitalRead(VB) == HIGH) || 
-     (digitalRead(UT) == HIGH && digitalRead(UB) == HIGH))
+    (digitalRead(VT) == HIGH && digitalRead(VB) == HIGH) || 
+    (digitalRead(UT) == HIGH && digitalRead(UB) == HIGH))
   {
-     switchOffTransistors();
-     
-     // signal that state is prohibited
-     while(true)
-     {
-       digitalWrite(prohibitedStateLED, !digitalRead(prohibitedStateLED));
-       delay(300);
-     }
+    switchOffTransistors();
+
+    // signal that state is prohibited
+    while(true)
+    {
+      digitalWrite(prohibitedStateLED, !digitalRead(prohibitedStateLED));
+      delay(300);
+    }
   }
 }
 
@@ -120,83 +126,125 @@ void commutation()
 {
   switch(rotorLocation++)
   {
-     case 1:
-     {
-       // U +
-       switchOnU();
-       // V -
-       switchOffV();
-       // W NC
-       disconnectW();
-       
-       break;
-     }
-     case 2:
-     {
-       // U +
-       switchOnU();
-       // V NC
-       disconnectV();
-       // W -
-       switchOffW();
-       
-       break;
-     } 
-     case 3:
-     {
-       // U NC
-       disconnectU();
-       // V +
-       switchOnV();
-       // W -
-       switchOffW();
+  case 1:
+    {
+      // U +
+      switchOnU();
+      // V -
+      switchOffV();
+      // W NC
+      disconnectW();
+
+      break;
+    }
+  case 6:
+    {
+      // U +
+      switchOnU();
+      // V NC
+      disconnectV();
+      // W -
+      switchOffW();
       
-       break;
-     } 
-     case 4:
-     {
-       // U -
-       switchOffU();
-       // V +
-       switchOnV();
-       // W NC
-       disconnectW();
-       
-       break;
-     } 
-     case 5:
-     {
-       // U -
-       switchOffU();
-       // V NC
-       disconnectV();
-       // W + 
-       switchOnW();
-       
-       break;
-     } 
-     case 6:
-     {
-       // U NC
-       disconnectU();
-       // V -
-       switchOffV();
-       // W +
-       switchOnW();
-       
-       rotorLocation = 1;
-       
-       if(dutyCycle < 1) 
-         dutyCycle += 0.05;
-       
-       break;
-     } 
+      rotorLocation = 1;
+      
+      break;
+    } 
+  case 5:
+    {
+      // U NC
+      disconnectU();
+      // V +
+      switchOnV();
+      // W -
+      switchOffW();
+
+      break;
+    } 
+  case 4:
+    {
+      // U -
+      switchOffU();
+      // V +
+      switchOnV();
+      // W NC
+      disconnectW();
+
+      break;
+    } 
+  case 3:
+    {
+      // U -
+      switchOffU();
+      // V NC
+      disconnectV();
+      // W + 
+      switchOnW();
+
+      break;
+    } 
+  case 2:
+    {
+      // U NC
+      disconnectU();
+      // V -
+      switchOffV();
+      // W +
+      switchOnW();
+
+      break;
+    } 
   }
-  
+
   fuse();
 }
 
 /***********************************************************************/
+
+
+void myDelay(int *state, int *prevDelay, int engineSpeed)
+{  
+  if(*prevDelay < engineSpeed)
+  {
+    delay(*prevDelay);
+    return;
+  }
+  
+  if((*state)++ == 12)
+  {
+    *state = 0;
+
+    *prevDelay = *prevDelay - 1;
+
+    delay(*prevDelay);
+
+    return;
+  }
+
+  delay(*prevDelay);
+}
+
+void myMicroDelay(int *state, int *prevDelay)
+{
+  if(*prevDelay < 3000)
+  {
+    delayMicroseconds(*prevDelay);
+    return;
+  }
+
+  if((*state)++ == 6)
+  {
+    *state = 0;
+    
+    *prevDelay = *prevDelay - shift;
+ 
+    delayMicroseconds(*prevDelay);
+
+    return;
+  }
+
+  delayMicroseconds(*prevDelay);
+}
 
 void setup()
 {
@@ -207,16 +255,40 @@ void setup()
   pinMode(VT, OUTPUT);
   pinMode(UB, OUTPUT);
   pinMode(UT, OUTPUT);
-  
+  pinMode(13, OUTPUT);
+
   switchOffTransistors();
 }
 
 void loop()
 {
-  commutation();
+  int state = 0;
+  int prevDelay = 50;
+  int engineSpeed = 30;
+
+  while(true)
+  {
+    commutation();
+    
+    //delay(40);
+    
+    myDelay(&state, &prevDelay, engineSpeed);
   
-  delay(20); // setting engine speed 
+    if(prevDelay < 15)
+      break;
+  }
+
+  /*prevDelay = 15000;
+
+  digitalWrite(13, HIGH);
+
+  while(true)
+  {
+    commutation();
+    myMicroDelay(&state, &prevDelay);
+  }*/
 }
+
 
 
 
